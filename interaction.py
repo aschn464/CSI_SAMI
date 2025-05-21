@@ -12,6 +12,7 @@ language = "en"
 mic_names = sr.Microphone.list_microphone_names()
 url = "http://localhost:11434/api/chat"
 SAVE_FILE = 'game_so_far.txt'
+story_context = ""
 
 ########################################################################
 # load model
@@ -67,7 +68,7 @@ def load_state():
 ########################################################################
 def load_saved_game():
     while True:
-        user_choice = input("Previous game file found. Would you like to continue? (y/n) \n").strip().lower
+        user_choice = input("Previous game file found. Would you like to continue? (y/n) \n").strip().lower()
         if user_choice in {'y', 'yes'}:
             print("loading saved game... \n")
             return True
@@ -93,16 +94,24 @@ def main():
     
     init_game()
     
-    while game_loop:
-        game_loop()
+    while True:
+        result = game_loop()
+        if result == 0:
+            break
     
 
 ########################################################################
 # Begin the game
 ########################################################################
 def init_game():
-    loaded = load_game
-    if loaded: story_context = loaded
+    global story_context
+    
+    
+    loaded = load_game()
+    if loaded: 
+        story_context = loaded
+    else: 
+        story_context = ""
 
     text_to_speech("Welcome to The Inn, a Collaborative Storytelling Setting. Say begin to start game. Say quit to exit.")
 
@@ -112,12 +121,14 @@ def init_game():
 # 
 ########################################################################
 def game_loop():
+    global story_context
+    
     # get user input
     query = speech_to_text(mic_index)
     
     # check for quit or save
     if query in {"quit", "exit", "save", "save game"}:
-        save_game()
+        save_game(story_context)
         return 0
 
     # start measuring time
@@ -201,6 +212,8 @@ def transmit_prompt(prompt, story_context):
 # 
 ########################################################################
 def text_to_speech(response):
+    print(response)
+    
     ttsobj = gTTS(text=response, lang=language, slow=False)
     with TemporaryFile(delete=False, suffix=".mp3") as temp_file:
         ttsobj.save(temp_file.name)
