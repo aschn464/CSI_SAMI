@@ -1,12 +1,12 @@
 import requests
 import speech_recognition as sr
-from ollama import Client
-from ollama import generate
+# from ollama import Client
+# from ollama import generate
 import os
 import time
 from gtts import gTTS
 import pygame
-from tempfile import TemporaryFile
+from tempfile import NamedTemporaryFile 
 
 language = "en"
 mic_names = sr.Microphone.list_microphone_names()
@@ -20,7 +20,7 @@ story_context = ""
 def init_model():
     requests.post(url,
         json={
-            "model": "llama_mud",
+            "model": "llama3.2:latest",
             "prompt": "load"
         }
                   )
@@ -180,7 +180,7 @@ def transmit_prompt(prompt, story_context):
     full_story = f"{story_context}\nPlayer: {prompt}\nNarrator:"
 
     data = {
-        "model": "llama_mud",
+        "model": "llama3.2:latest",
         "messages": [
             {
                 "role": "user",
@@ -203,11 +203,6 @@ def transmit_prompt(prompt, story_context):
   
   
   
- 
-
-
-
-
 ########################################################################
 # 
 ########################################################################
@@ -215,7 +210,7 @@ def text_to_speech(response):
     print(response)
     
     ttsobj = gTTS(text=response, lang=language, slow=False)
-    with TemporaryFile(delete=False, suffix=".mp3") as temp_file:
+    with NamedTemporaryFile(delete=False, suffix=".mp3") as temp_file:
         ttsobj.save(temp_file.name)
         filename = temp_file.name
 
