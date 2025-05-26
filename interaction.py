@@ -37,6 +37,11 @@ def load_emote_mapping(emote_file):
 joint_map = load_joint_config(joint_config_file)
 emote_mapping = load_emote_mapping(emote_file)
 
+full_joint_config = None
+with open(joint_config_file, 'r') as f:
+    full_joint_config = json.load(f)['JointConfig']
+full_joint_map = {joint['JointName']: joint for joint in full_joint_config}
+
 mic_names = sr.Microphone.list_microphone_names()
 url = "http://localhost:11434/api/chat"
 SAVE_FILE = 'game_so_far.txt'
@@ -182,12 +187,14 @@ def game_loop(ser):
     
     # call text to speech
     t1 = threading.Thread(text_to_speech(response))
-    t2 = threading.Thread(read_json("explaining.json"))
+    t2 = threading.Thread(read_json(ser, "explaining.json"))
 
     t1.start()
     t2.start()
     t1.join()
     t2.join()
+
+    go_home(ser)
 
     # add messages to full story
     story_context += f"Player: {query}\nNarrator:{response}"
@@ -331,3 +338,8 @@ def initialize_serial_connection():
         return ser
     except serial.SerialException as e:
         print("Error connecting to Arduino:", e)
+
+def go_home(ser):
+        joint_ids = [joint['JointID'] for joint in full_joint_config]
+        home_angles = [joint['HomeAngle'] for joint in full_joint_config]
+        send_joint_command(ser, joint_ids, home_angles, 1)
