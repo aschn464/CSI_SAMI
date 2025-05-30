@@ -1,0 +1,24 @@
+{
+    "Name": "PointForward",
+    "Keyframes": [
+        {
+            "HasEmote": "True",
+            "HasAudio": "False",
+            "HasJoints": "True",
+            "Expression": "Neutral",
+            "WaitTime": 5000,
+            "JointMoveTime": 4,
+            "JointAngles": [
+              
+              {
+                "Joint":"RightElbow",
+                "Angle":10
+              },
+              {
+                "Joint": "RightShoulder",
+                "Angle": 180
+              }
+            ]
+        }
+    ]
+}

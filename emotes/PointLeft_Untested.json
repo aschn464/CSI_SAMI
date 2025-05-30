@@ -1,0 +1,24 @@
+{
+    "Name": "Point",
+    "Keyframes": [
+        {
+            "HasEmote": "True",
+            "HasAudio": "False",
+            "HasJoints": "True",
+            "Expression": "Neutral",
+            "WaitTime": 5000,
+            "JointMoveTime": 4,
+            "JointAngles": [
+              
+              {
+                "Joint":"LeftElbow",
+                "Angle":10
+              },
+              {
+                "Joint": "LeftShoulder",
+                "Angle": 90
+              }
+            ]
+        }
+    ]
+}

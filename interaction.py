@@ -10,13 +10,23 @@ import serial
 import json
 import threading
 from threading import Event
+from pathlib import Path
+import random
+
 
 language = "en"
 
 os.environ["OLLAMA_MODELS"] = os.path.abspath("ollama/models")
 conversation_history = ""
 
-arduino_port='COM6'
+dir_path = "emotes"
+
+available_emotes = []
+for json_file in [f for f in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, f))]:
+    available_emotes.append("emotes/"+json_file)
+    print("emotes/"+json_file)
+
+arduino_port='COM3'
 baud_rate=115200
 joint_config_file='Joint_config.json'
 emote_file='Emote.json'
@@ -24,24 +34,33 @@ audio_folder='audio'
 starting_voice='Matt'
 audio_file_encoding='.mp3'
 
+def load_joint_config(joint_config_file):
+    with open(joint_config_file, 'r') as file:
+        config = json.load(file)
+    joint_map = {}
+    for joint in config["JointConfig"]:
+        joint_map[joint["JointName"]] = joint["JointID"]
+    return joint_map
+
+def load_emote_mapping(emote_file):
+    with open(emote_file, 'r') as file:
+        data = json.load(file)
+    return data["Emotes"]
+
 with open(joint_config_file, 'r') as file:
     config = json.load(file)
 joint_map = {}
 for joint in config["JointConfig"]:
     joint_map[joint["JointName"]] = joint["JointID"]
 
+print(joint_map)
+
+emote_mapping = load_emote_mapping(emote_file)
+
 full_joint_config = None
-emote_mapping = None
 with open(joint_config_file, 'r') as f:
     full_joint_config = json.load(f)['JointConfig']
 full_joint_map = {joint['JointName']: joint for joint in full_joint_config}
-with open(emote_file, 'r') as file:
-    data = json.load(file)
-    emote_mapping = data["Emotes"]
-
-#print(joint_map)
-#print(full_joint_config)
-#print(emote_mapping)
 
 mic_names = sr.Microphone.list_microphone_names()
 url = "http://localhost:11434/api/chat"
@@ -123,61 +142,73 @@ def read_json(ser, filename, stop_event):
             send_joint_command(ser, joint_ids, joint_angles, joint_time)
         time.sleep(keyframe.get("WaitTime", 1000) / 1000)
 
-def go_home(ser):
-        print("Resetting Gesture")
-        joint_ids = [joint['JointID'] for joint in full_joint_config]
-        home_angles = [joint['HomeAngle'] for joint in full_joint_config]
-        send_joint_command(ser, joint_ids, home_angles, 1)
+def get_gesture(response):
+    #model = pipeline("text-classification", model="j-hartmann/emotion-english-distilroberta-base")
+    #emotion = model(response)    
+    #print(emotion)
+    return available_emotes[random.randint(0, len(available_emotes) - 1)]
+
+def do_actions(ser, response):
+        stop_event = Event()
+        t1 = threading.Thread(target=text_to_speech, args=(response,))
+        t2 = threading.Thread(target=read_json, args=(ser, get_gesture(response), stop_event))
+        t1.start()
+        t2.start()
+        t1.join()
+        stop_event.set()
+        time.sleep(0.05)
+        t2.join()
+        t1 = None
+        t2 = None
+        read_json(ser, "home.json", Event())
 
 def main():
     print("Available Microphones:")
     for i, name in enumerate(mic_names):
-        print(f"{i}: {name}")
+        if "mic" in name.lower():
+            print(f"{i}: {name}")
     mic_index = int(input("Enter the index of the microphone you want to use: "))
-    
-    ser = initialize_serial_connection()
     
     while True:
         try:
+            #ser = initialize_serial_connection()
             query = speech_to_text(mic_index)
-            print(query)
+            print('\033[F' + '\033[1m' + "You say: " + '\033[0m' + query + '\033[K' + '\n', end='\033[K')
             response = transmit_prompt(query)
-            print(response)
-            stop_event = Event()
-            t1 = threading.Thread(target=text_to_speech, args=(response,))
-            t2 = threading.Thread(target=read_json, args=(ser, "explaining.json", stop_event))
-            t1.start()
-            t2.start()
-            t1.join()
-            stop_event.set()
-            time.sleep(0.05)
-            t2.join()
+            print('\033[1m' + "SAMI says: " + '\033[0m' + response + '\033[K')
+            
+            #do_actions(ser, response)
 
-            go_home(ser)
+            time.sleep(1.05)
+            #close_connection(ser)
+            ser = None
+
         except KeyboardInterrupt:
-            print("Exited by user.")
+            print('\x1B[3m' + "Exited by user." + '\x1B[0m')
             break
 
-    close_connection(ser)
+
 
 def speech_to_text(mic_index):
     r = sr.Recognizer()
     with sr.Microphone(device_index=mic_index) as source:
         r.adjust_for_ambient_noise(source)
+        failures = 0
         while True:
             print("Listening...")
             audio = r.listen(source)
             try:
                 return r.recognize_google(audio)
             except sr.UnknownValueError:
-                print("Could not understand audio.")
+                failures = failures + 1
+                print("Could not understand audio. Current failures: " + str(failures), end='\033[F')
             except sr.RequestError as e:
                 print(f"API error: {e}")
 
 
 def transmit_prompt(prompt):
     global conversation_history
-    print("Sending prompt to model...")
+    print("Sending prompt to model...", end='\r')
 
     conversation_history += f"User: {prompt}\nNarrator:"
 
@@ -191,9 +222,6 @@ def transmit_prompt(prompt):
 
 
 def text_to_speech(response):
-    from tempfile import NamedTemporaryFile
-    import atexit
-
     ttsobj = gTTS(text=response, lang=language, slow=False)
     with NamedTemporaryFile(delete=False, suffix=".mp3") as temp_file:
         ttsobj.save(temp_file.name)
@@ -218,7 +246,6 @@ def text_to_speech(response):
                 break
             except PermissionError:
                 time.sleep(0.2)
-    print("Done Reading")
 
 
 
