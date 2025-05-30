@@ -10,7 +10,6 @@ import serial
 import json
 import threading
 from threading import Event
-from pathlib import Path
 import random
 
 
@@ -184,7 +183,7 @@ def main():
             ser = None
 
         except KeyboardInterrupt:
-            print('\x1B[3m' + "Exited by user." + '\x1B[0m')
+            print('\x1B[3m' + "Exited by user." + '\x1B[0m' + '\033[K')
             break
 
 
