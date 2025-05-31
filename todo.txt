@@ -1,0 +1,6 @@
+->look into current use of "full_story" global variable... I would like this to be a 
+complete log of everything so far... not exactly sure what it's doing at the moment...
+
+->look into sory_context... is this a variable I can ultimately remove?
+
+->maybe create a global for size of recent_turns array
