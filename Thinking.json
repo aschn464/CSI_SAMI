@@ -2,20 +2,6 @@
     "Name": "Thinking",
     "Keyframes": [
       {
-            "HasEmote": "True",
-            "HasAudio": "False",
-            "HasJoints": "True",
-            "Expression": "Happy",
-            "JointMoveTime": 1,
-            "WaitTime": 50,
-            "JointAngles": [
-                {
-                    "Joint": "LeftElbow",
-                    "Angle": 95
-                }
-            ]
-      },
-      {
         "HasEmote": "True",
         "HasAudio": "False",
         "AudioClip": "intro",
