@@ -44,13 +44,13 @@ def save_game():
     while True:
         if response in {"yes", "y"}:
             save_data = {
-                "inventory": inventory,
+                "inventory": inventory, 
                 "full_story": full_story,
                 "recent_turns": recent_turns,
                 "story_summary": story_summary,
             }
             with open(SAVE_FILE, "w", encoding="utf-8") as f:
-                json.dump(save_data, f)
+                json.dump(save_data, f, indent=4)
                 return
 
         elif response in {'n', 'no'}:
