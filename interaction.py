@@ -145,7 +145,8 @@ def get_gesture(response):
     #model = pipeline("text-classification", model="j-hartmann/emotion-english-distilroberta-base")
     #emotion = model(response)    
     #print(emotion)
-    return available_emotes[random.randint(0, len(available_emotes) - 1)]
+    #return available_emotes[random.randint(0, len(available_emotes) - 1)]
+    return available_emotes[1]
 
 def do_actions(ser, response):
         stop_event = Event()
@@ -170,16 +171,33 @@ def main():
     
     while True:
         try:
-            #ser = initialize_serial_connection()
+            ser = initialize_serial_connection()
+            stop_event = Event()
+            t3 = threading.Thread(target=read_json, args=(ser, "Listening.json", stop_event))
+            t3.start()
             query = speech_to_text(mic_index)
+            stop_event.set()
+            time.sleep(0.05)
+            t3.join()
+            t3 = None
+
             print('\033[F' + '\033[1m' + "You say: " + '\033[0m' + query + '\033[K' + '\n', end='\033[K')
+
+            stop_event = Event()
+            t4 = threading.Thread(target=read_json, args=(ser, "Thinking.json", stop_event))
+            t4.start()
             response = transmit_prompt(query)
+            stop_event.set()
+            time.sleep(0.05)
+            t4.join()
+            t4 = None
+
             print('\033[1m' + "SAMI says: " + '\033[0m' + response + '\033[K')
             
-            #do_actions(ser, response)
+            do_actions(ser, response)
 
             time.sleep(1.05)
-            #close_connection(ser)
+            close_connection(ser)
             ser = None
 
         except KeyboardInterrupt:
