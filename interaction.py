@@ -27,8 +27,8 @@ for json_file in [f for f in os.listdir(dir_path) if os.path.isfile(os.path.join
 
 arduino_port='COM3'
 baud_rate=115200
-joint_config_file='Joint_config.json'
-emote_file='Emote.json'
+joint_config_file='config/Joint_config.json'
+emote_file='config/Emote.json'
 audio_folder='audio'
 starting_voice='Matt'
 audio_file_encoding='.mp3'
@@ -99,12 +99,12 @@ def send_joint_command(ser, joint_ids, joint_angles, joint_time):
         packet.extend([jid, angle])
     packet.append(0x3E)
     ser.write(bytearray(packet))
-    print("Sent joint command:", bytearray(packet))
+    #print("Sent joint command:", bytearray(packet))
 
 def send_emote(ser, emote_id):
     packet = [0x3C, 0x45, emote_id, 0x3E]
     ser.write(bytearray(packet))
-    print("Sent emote command:", bytearray(packet))
+    #print("Sent emote command:", bytearray(packet))
     time.sleep(1)
 
 def get_joint_id(joint_name):
@@ -118,14 +118,6 @@ def read_json(ser, filename, stop_event):
         if stop_event.is_set():
             print("Stopping gesture early.")
             break
-
-        # Process Audio if enabled.
-        #if keyframe.get("HasAudio") == "True":
-            # Use "AudioClip" if provided; otherwise fall back to the "Expression" or a default.
-            # audio_clip = keyframe.get("AudioClip", keyframe.get("Expression", "default_audio"))
-            # print("Processing audio keyframe – playing:", audio_clip)
-            #audio_manager.send_audio(audio_clip)
-        # Process Emote if enabled.
         if keyframe.get("HasEmote") == "True":
             expression = keyframe.get("Expression", "Neutral")
             emote_value = emote_mapping.get(expression, 0)
@@ -160,7 +152,7 @@ def do_actions(ser, response):
         t2.join()
         t1 = None
         t2 = None
-        read_json(ser, "home.json", Event())
+        read_json(ser, "config/home.json", Event())
 
 def main():
     print("Available Microphones:")
@@ -173,7 +165,7 @@ def main():
         try:
             ser = initialize_serial_connection()
             stop_event = Event()
-            t3 = threading.Thread(target=read_json, args=(ser, "Listening.json", stop_event))
+            t3 = threading.Thread(target=read_json, args=(ser, "config/Listening.json", stop_event))
             t3.start()
             query = speech_to_text(mic_index)
             stop_event.set()
@@ -184,7 +176,7 @@ def main():
             print('\033[F' + '\033[1m' + "You say: " + '\033[0m' + query + '\033[K' + '\n', end='\033[K')
 
             stop_event = Event()
-            t4 = threading.Thread(target=read_json, args=(ser, "Thinking.json", stop_event))
+            t4 = threading.Thread(target=read_json, args=(ser, "config/Thinking.json", stop_event))
             t4.start()
             response = transmit_prompt(query)
             stop_event.set()
