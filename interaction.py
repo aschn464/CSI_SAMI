@@ -141,17 +141,12 @@ def game_loop():
         save_game(story_context)
         return 0
     
-<<<<<<< Updated upstream
-    if update_inventory(query):  # Skip LLM if inventory was handled
-        return 1
-=======
     elif query in {"save", "save game"}:
         save_game()
     
     #check for inventory management. skips LLM if query is solely checking inventory.
     if update_inventory(query) is False:
         return        
->>>>>>> Stashed changes
     
     # start measuring time
     start_time = time.time()
