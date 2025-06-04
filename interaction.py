@@ -8,6 +8,7 @@ from gtts import gTTS
 import pygame
 from tempfile import NamedTemporaryFile 
 import json
+import re
 
 language = "en"
 mic_names = sr.Microphone.list_microphone_names()
@@ -140,8 +141,17 @@ def game_loop():
         save_game(story_context)
         return 0
     
+<<<<<<< Updated upstream
     if update_inventory(query):  # Skip LLM if inventory was handled
         return 1
+=======
+    elif query in {"save", "save game"}:
+        save_game()
+    
+    #check for inventory management. skips LLM if query is solely checking inventory.
+    if update_inventory(query) is False:
+        return        
+>>>>>>> Stashed changes
     
     # start measuring time
     start_time = time.time()
@@ -165,22 +175,29 @@ def game_loop():
 # update inventory
 ########################################################################
 def update_inventory(query):
-    if query.lower() in {"inventory", "check inventory", "show inventory"}:
+    query = query.lower()
+
+    # Check inventory
+    if query in {"inventory", "check inventory", "show inventory"}:
         if not inventory:
             text_to_speech("Your inventory is empty.")
         else:
-            inv_list = ', '.join(f"{item} (x{count})" if isinstance(inventory, dict) else item for item, count in inventory.items() if isinstance(inventory, dict))
+            inv_list = ', '.join(f"{item} (x{count})" for item, count in inventory.items())
             text_to_speech(f"You have: {inv_list}")
-        return True
-    
-    elif query.lower().startswith("take ") or query.lower().startswith("pick up "):
-        item = query.split(" ", 1)[1].strip()
+        return False
+
+    # Pick up or take item
+    match = re.search(r"(pick up|take)\s+(?:a|an|the)?\s*(.+)", query)
+    if match:
+        item = match.group(2).strip()
         inventory[item] = inventory.get(item, 0) + 1
-        text_to_speech(f"You have picked up a {item}.")
+        text_to_speech(f"You picked up a {item}.")
         return True
 
-    elif query.lower().startswith("use "):
-        item = query.split(" ", 1)[1].strip()
+    # Use item
+    match = re.search(r"use\s+(?:a|an|the)?\s*(.+)", query)
+    if match:
+        item = match.group(1).strip()
         if item in inventory and inventory[item] > 0:
             inventory[item] -= 1
             if inventory[item] == 0:
@@ -189,9 +206,11 @@ def update_inventory(query):
         else:
             text_to_speech(f"You don't have a {item} to use.")
         return True
-    
-    elif query.startswith("drop ") or query.startswith("remove "):
-        item = query.split(" ", 1)[1].strip()
+
+    # Drop or remove item
+    match = re.search(r"(drop|remove)\s+(?:a|an|the)?\s*(.+)", query)
+    if match:
+        item = match.group(2).strip()
         if item in inventory:
             inventory[item] -= 1
             if inventory[item] <= 0:
@@ -200,8 +219,9 @@ def update_inventory(query):
         else:
             text_to_speech(f"You don't have a {item}.")
         return True
-    
-    return False
+
+    return True
+
 
 
 
