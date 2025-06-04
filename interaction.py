@@ -114,16 +114,18 @@ def load_saved_game():
 # Begin the game
 ########################################################################
 def init_game():
-    global story_context
-    
-    
-    loaded = load_game()
-    if loaded: 
-        story_context = loaded
-    else: 
-        story_context = ""
+    continue_game = False
+    loaded = load_state()        #load game only returns true or Null... can remove loaded I think
 
-    text_to_speech("Welcome to The Inn, a Collaborative Storytelling Setting. Say begin to start game. Say quit to exit.")
+    if loaded:
+        continue_game = load_saved_game()
+
+    if continue_game:
+        global story_summary, recent_turns
+        load_game()
+        print(f"The game so far: {story_summary}\nMost Recent move: {recent_turns[2]}")
+    else:
+        text_to_speech("Welcome to The Inn, a Collaborative Storytelling Setting. Say begin to start game. Say quit to exit.")
 
 
 
@@ -133,11 +135,9 @@ def init_game():
 def game_loop():
     global recent_turns, story_summary, full_story
     
-    #get user input for text only game
+    #get user input for text only game and set flag to appropriate value
     if TEXT_ONLY_MODE:
         query = speech_to_text().lower().strip()
-    
-    # get user input for speech to text
     else:
         query = speech_to_text(mic_index).lower().strip()
     
@@ -147,10 +147,11 @@ def game_loop():
     
     elif query in {"save", "save game"}:
         save_game()
+        return 1
     
     # call inventory func. skip LLM if all player did was check inventory or use nonexistent item.
     if update_inventory(query) is False:  
-        return 0
+        return 1
     
     # start measuring time
     start_time = time.time()
@@ -296,12 +297,11 @@ def construct_prompt(query):
 # function that summarizes older interactions to keep prompts short
 ########################################################################
 def summarize_story(oldest, story_summary):
-    prompt = (f"create a summary of the interactions below. Be sure to keep all important story beats and player interactions.", 
-              " The summary should be coherent and anybody who reads it should be able to read it and remember what came before\n\n"
-              f"current summary: {story_summary}\n\n"
-              f"Newest interaction: {oldest}")
+    prompt = f"""create a summary of the interactions below. Be sure to keep all important story beats and player interactions. 
+            The summary should be coherent and anybody who reads it should be able to read it and remember what came before\n
+            current summary: {story_summary}\n
+            Newest interaction: {oldest}"""
     return transmit_prompt(prompt)
-
 
 ########################################################################
 # 
