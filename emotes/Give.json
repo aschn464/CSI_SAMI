@@ -1,5 +1,5 @@
 {
-    "Name": "CastSpell",
+    "Name": "Give",
     "Keyframes": [
         {
             "HasEmote": "True",
@@ -89,31 +89,25 @@
                     "Joint": "TorsoTilt",
                     "Angle": 115
                 }
-            ]
-        },
-        {
+            ]},{
             "HasEmote": "True",
             "HasAudio": "False",
             "HasJoints": "True",
-            "Expression": "Happy",
-            "WaitTime": 1000,
-            "JointMoveTime": 1,
+            "Expression": "slightDown",
+            "WaitTime": 1500,
+            "JointMoveTime": 2,
             "JointAngles": [
               {
-                "Joint": "LeftShoulder",
-                "Angle": 90
-              },
-              {
-                "Joint": "LeftBicep",
-                "Angle": 30
+                "Joint": "RightShoulder",
+                "Angle": 135
               },
               {
                 "Joint": "RightChest",
-                "Angle": 220
+                "Angle": 80
               },
               {
-                "Joint":"RightBicep",
-                "Angle": 25
+                "Joint": "HeadTurn",
+                "Angle": 100
               }
             ]
         },
@@ -121,26 +115,66 @@
             "HasEmote": "True",
             "HasAudio": "False",
             "HasJoints": "True",
-            "Expression": "Sleepy",
+            "Expression": "Down",
             "WaitTime": 1000,
             "JointMoveTime": 1,
             "JointAngles": [
-             
               {
                 "Joint": "RightChest",
-                "Angle": 210
+                "Angle": 135
               },
               {
-                "Joint":"RightBicep",
-                "Angle": 115
+                "Joint": "RightElbow",
+                "Angle": 0
+              }
+            ]
+        },
+        {
+            "HasEmote": "True",
+            "HasAudio": "False",
+            "HasJoints": "True",
+            "Expression": "Down",
+            "WaitTime": 1000,
+            "JointMoveTime": 1,
+            "JointAngles": [
+              {
+                "Joint": "RightChest",
+                "Angle": 90
               },
               {
-                "Joint":"RightElbow",
+                "Joint": "RightElbow",
+                "Angle": 90
+              }
+            ]
+        },
+        {
+            "HasEmote": "True",
+            "HasAudio": "True",
+            "AudioClip":"HereTakeThis",
+            "HasJoints": "True",
+            "Expression": "Neutral",
+            "WaitTime": 1000,
+            "JointMoveTime": 1,
+            "JointAngles": [
+              {
+                "Joint": "RightChest",
+                "Angle": 220
+              },
+              {
+                "Joint":"RightShoulder",
+                "Angle": 80
+              },
+              {
+                "Joint": "RightElbow",
                 "Angle": 20
               },
               {
-                "Joint":"LeftElbow",
-                "Angle": 135
+                "Joint":"RightBicep",
+                "Angle":180
+              },
+              {
+                "Joint":"HeadTurn",
+                "Angle": 120
               }
             ]
         }
