@@ -1,5 +1,4 @@
 import speech_recognition as sr
-# from ollama import Client
 from ollama import generate
 import os
 import time
@@ -10,13 +9,13 @@ import serial
 import json
 import threading
 from threading import Event
-import random
-import subprocess
 import tkinter as tk
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
 import queue
 from queue import Empty
+import re
+import requests
 
 language = "en"
 
@@ -69,8 +68,11 @@ mic_index = int(input("Enter the index of the microphone you want to use: "))
 
 url = "http://localhost:11434/api/chat"
 SAVE_FILE = 'game_so_far.txt'
-story_context = ""
+TEXT_ONLY_MODE = False
+story_summary = ""
 full_story = ""
+recent_turns = []
+inventory = {}
 ser = None
 
 ########################################################################
@@ -148,6 +150,89 @@ def get_gesture(response):
     #return available_emotes[random.randint(0, len(available_emotes) - 1)]
     return available_emotes[1]
 
+def speech_to_text(mic_index):
+    r = sr.Recognizer()
+    with sr.Microphone(device_index=mic_index) as source:
+        r.adjust_for_ambient_noise(source)
+        failures = 0
+        while True:
+            print("Listening...")
+            audio = r.listen(source)
+            try:
+                return r.recognize_google(audio)
+            except sr.UnknownValueError:
+                failures = failures + 1
+                print("Could not understand audio. Current failures: " + str(failures), end='\033[F')
+            except sr.RequestError as e:
+                print(f"API error: {e}")
+
+def transmit_prompt(prompt):
+    global conversation_history
+    print("Sending prompt to model...", end='\r')
+    qR.put(["Action", "Sending prompt to model..."])
+
+    conversation_history += f"User: {prompt}\nNarrator:"
+
+    request = generate(model='llama_mud', prompt=conversation_history)
+    response = request['response'].strip()
+
+    conversation_history += f" {response}\n"
+
+    return response
+
+def transmit_prompt(prompt):
+    print("Sending prompt to model...", end='\r')
+    qR.put(["Action", "Sending prompt to model..."])
+    inventory_context = format_inventory_for_prompt()
+    content = f"{inventory_context}\n{prompt}"
+    
+    data = {
+        "model": "llama_mud",
+        "messages": [
+            {
+                "role": "user",
+                "content": content,
+            }
+        ],
+        "stream": False,
+    }
+
+    headers = {
+        "Content-Type": "application/json"
+    }
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()
+        return response.json()["message"]["content"]
+    except Exception as e:
+        print("Error during LLAMA call:", e)
+        return "[Error]" 
+
+def text_to_speech(response):
+    ttsobj = gTTS(text=response, lang=language, slow=False)
+    with NamedTemporaryFile(delete=False, suffix=".mp3") as temp_file:
+        ttsobj.save(temp_file.name)
+        filename = temp_file.name
+
+    try:
+        pygame.mixer.quit()
+        pygame.mixer.init()
+        pygame.mixer.music.load(filename)
+        pygame.mixer.music.play()
+
+        while pygame.mixer.music.get_busy():
+            time.sleep(0.5)
+
+    finally:
+        pygame.mixer.music.stop()
+        pygame.mixer.quit()
+
+        for _ in range(10):
+            try:
+                os.remove(filename)
+                break
+            except PermissionError:
+                time.sleep(0.2)
 
 class GUI(tk.Tk):
     def __init__(self):
@@ -156,6 +241,7 @@ class GUI(tk.Tk):
         self.geometry("800x500")
 
         self.paused = tk.BooleanVar(value=False)
+        self.exited = tk.BooleanVar(value=False)
         
         self._create_widgets()
         self._layout_widgets()
@@ -177,7 +263,10 @@ class GUI(tk.Tk):
         self.dropdown_menu = ttk.Combobox(self, textvariable=self.dropdown_var, state="readonly")
         self.dropdown_menu['values'] = mic_names
         self.dropdown_menu.current(0)
-        self.switch = ttk.Checkbutton(self, text="Pause", variable=self.paused, command=self.toggle_pause)
+
+        self.status_frame = tk.Frame(self)
+        self.button = tk.Button(self.status_frame, text="EXIT", command=self.exit_game)
+        self.switch = ttk.Checkbutton(self.status_frame, text="Pause", variable=self.paused, command=self.toggle_pause)
 
         # Row 3: Two side-by-side consoles
         self.console_left = ScrolledText(self, wrap=tk.WORD, width=50, height=20, bg="#FDFDFD", font=("Segoe UI", 12))
@@ -218,12 +307,13 @@ class GUI(tk.Tk):
 
         self.title_label.grid(row=0, column=0, columnspan=2, pady=10)
         self.dropdown_menu.grid(row=1, column=0, pady=5, sticky="ew", padx=20)
-        self.switch.grid(row=1, column=1)
+
+        self.status_frame.grid(row=1, column=1)
+        self.switch.pack(side="left")
+        self.button.pack(side="right")
+
         self.console_left.grid(row=2, column=0, padx=(20, 10), pady=10, sticky="nsew")
         self.console_right.grid(row=2, column=1, padx=(10, 20), pady=10, sticky="nsew")
-
-    def toggle_pause(self):
-        self.pause = self.paused.get()
 
     def check_queue(self):
         try:
@@ -238,12 +328,187 @@ class GUI(tk.Tk):
             pass
         self.after(50, self.check_queue)
 
+    def toggle_pause(self):
+        self.pause = self.paused.get()
+    
+    def exit_game(self):
+        self.destroy()
+
+########################################################################
+# save game to text file
+########################################################################
+def save_game():
+    text_to_speech("Would you like to save your game?")
+    
+    #quick check for text only mode
+    if TEXT_ONLY_MODE:
+        response = speech_to_text()
+    else:
+        response = speech_to_text(mic_index)
+
+    while True:
+        if response in {"yes", "y"}:
+            save_data = {
+                "inventory": inventory, 
+                "full_story": full_story,
+                "recent_turns": recent_turns,
+                "story_summary": story_summary,
+            }
+            with open(SAVE_FILE, "w", encoding="utf-8") as f:
+                json.dump(save_data, f, indent=4)
+                return
+
+        elif response in {'n', 'no'}:
+            return 
+        else:
+            print("Please enter 'yes' or 'no'!") 
+
+########################################################################
+# if save exists, load it
+########################################################################
+def load_game():
+    global inventory, full_story, recent_turns, story_summary
+    if os.path.exists(SAVE_FILE):
+        with open(SAVE_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            inventory = data.get("inventory", {})
+            full_story = data.get("full_story", "")
+            recent_turns = data.get("recent_turns", [])
+            story_summary = data.get("story_summary", "")
+            return data.get("context", "")
+    return None
+
+########################################################################
+# detects if a previous save file exists
+########################################################################
+def load_state():
+    if os.path.exists(SAVE_FILE):
+        with open(SAVE_FILE, "r", encoding="utf-8") as f:
+            return f.read()
+    return None
+
+########################################################################
+# prompt user to choose new or saved game
+########################################################################
+def load_saved_game():
+    while True:
+        user_choice = input("Previous game file found. Would you like to continue? (y/n): ").strip().lower()
+        if user_choice in {'y', 'yes'}:
+            print("loading saved game... \n")
+            return True
+        elif user_choice in {'n', 'no'}:
+            print ("Beginning new game... \n")
+            return False
+        else:
+            print("Please enter 'yes' or 'no'!")
+
+########################################################################
+# Begin the game
+########################################################################
+def init_game():
+    continue_game = False
+    loaded = load_state()        #load game only returns true or Null... can remove loaded I think
+
+    if loaded:
+        continue_game = load_saved_game()
+
+    if continue_game:
+        global story_summary, recent_turns
+        load_game()
+        print(f"The game so far: {story_summary}\nMost Recent move: {recent_turns[2]}")
+    else:
+        pass
+        #text_to_speech("Welcome to The Inn, a Collaborative Storytelling Setting. Say begin to start game. Say quit to exit.")
+
+########################################################################
+# update inventory
+########################################################################
+def update_inventory(query):
+    query = query.lower()
+
+    # Check inventory
+    if query in {"inventory", "check inventory", "show inventory"}:
+        if not inventory:
+            text_to_speech("Your inventory is empty.")
+        else:
+            inv_list = ', '.join(f"{item} (x{count})" for item, count in inventory.items())
+            text_to_speech(f"You have: {inv_list}")
+        return False
+
+    # Pick up or take item
+    match = re.search(r"(pick up|take)\s+(?:a|an|the)?\s*(.+)", query)
+    if match:
+        item = match.group(2).strip()
+        inventory[item] = inventory.get(item, 0) + 1
+        text_to_speech(f"You picked up a {item}.")
+        return True
+
+    # Use item
+    match = re.search(r"use\s+(?:a|an|the)?\s*(.+)", query)
+    if match:
+        item = match.group(1).strip()
+        if item in inventory and inventory[item] > 0:
+            inventory[item] -= 1
+            if inventory[item] == 0:
+                del inventory[item]
+            text_to_speech(f"You use the {item}.")
+        else:
+            text_to_speech(f"You don't have a {item} to use.")
+        return True
+
+    # Drop or remove item
+    match = re.search(r"(drop|remove)\s+(?:a|an|the)?\s*(.+)", query)
+    if match:
+        item = match.group(2).strip()
+        if item in inventory:
+            inventory[item] -= 1
+            if inventory[item] <= 0:
+                del inventory[item]
+            text_to_speech(f"You dropped the {item}.")
+        else:
+            text_to_speech(f"You don't have a {item}.")
+        return True
+
+    return True
+
+########################################################################
+# format inventory
+########################################################################
+def format_inventory_for_prompt():
+    if not inventory:
+        return "The player's inventory is empty."
+    else:
+        return "The player has the following items: " + ", ".join(
+            f"{item} (x{count})" for item, count in inventory.items()
+        )
+
+########################################################################
+# function that builds the prompt to send to the LLM for it's DM response
+########################################################################
+def construct_prompt(query):
+    prompt = f"summary of story so far:\n{story_summary}\n\n"
+    prompt += f"recent interactions:\n" + "\n".join(recent_turns) + "\n"
+    prompt += f"Player: {query}\nNarator: "
+    return prompt
+
+########################################################################
+# function that summarizes older interactions to keep prompts short
+########################################################################
+def summarize_story(oldest, story_summary):
+    prompt = f"""create a summary of the interactions below. Be sure to keep all important story beats and player interactions. 
+            The summary should be coherent and anybody who reads it should be able to read it and remember what came before\n
+            current summary: {story_summary}\n
+            Newest interaction: {oldest}"""
+    return transmit_prompt(prompt)
 
 def gameloop(exit_flag, paused):
+    global recent_turns, story_summary, full_story
     while not exit_flag.is_set():
         ser = initialize_serial_connection()
+        
         while paused.get():
             pass
+
         if not exit_flag.is_set():
             stop_event = Event()
             emote_thread = threading.Thread(target=read_json, args=(ser, "config/Listening.json", stop_event))
@@ -255,21 +520,38 @@ def gameloop(exit_flag, paused):
 
             print('\033[F' + '\033[1m' + "You say: " + '\033[0m' + query + '\033[K' + '\n', end='\033[K')
             qL.put(["user", query])
+
         while paused.get():
             pass
+            
+        # check for quit or save
+        if query in {"quit", "exit"}:
+            return
+        elif query in {"save", "save game"}:
+            save_game()
+            close_connection(ser)
+            continue
+        # call inventory func. skip LLM if all player did was check inventory or use nonexistent item.
+        if update_inventory(query) is False:
+            close_connection(ser)
+            continue
+
         if not exit_flag.is_set():
             stop_event = Event()
             emote_thread = threading.Thread(target=read_json, args=(ser, "config/Thinking.json", stop_event))
             emote_thread.start()
-            response = transmit_prompt(query)
+            prompt = construct_prompt(query)
+            response = transmit_prompt(prompt)
             stop_event.set()
             time.sleep(0.05)
             emote_thread.join()
 
             print('\033[1m' + "SAMI says: " + '\033[0m' + response + '\033[K')
             qL.put(["LLM", response])
+
         while paused.get():
             pass
+
         if not exit_flag.is_set():
             stop_event = Event()
             emote_thread = threading.Thread(target=read_json, args=(ser, get_gesture(response), stop_event))
@@ -278,14 +560,28 @@ def gameloop(exit_flag, paused):
             stop_event.set()
             time.sleep(0.05)
             emote_thread.join()
-
         read_json(ser, "config/home.json", Event())
+
+        #save the appropriate bits of information in the correct spaces. and summarize where appropriate
+        latest_interaction = f"Player: {query}\nNarrator:{response}"
+        recent_turns.append(latest_interaction)
+
+        #keep the most_recent list to 3 interactions and summarize everything before that
+        if len(recent_turns) > 3:
+            oldest = recent_turns.pop(0)
+            story_summary = summarize_story(oldest, story_summary)
+        
+        # add messages to full story
+        full_story += f"Player: {query}\nNarrator:{response}"
+
         time.sleep(1.05)
 
         close_connection(ser)
         ser = None
 
+
 def main():
+    init_game()
     exit_flag = Event()
     app = GUI()
     MUD_thread = threading.Thread(target=gameloop,args=(exit_flag,app.paused))
@@ -294,69 +590,12 @@ def main():
         app.after(50, app.check_queue)
         app.mainloop()
     except KeyboardInterrupt:
+        pass
+    finally:
         print('\x1B[3m' + "Exited by user." + '\x1B[0m' + '\033[K')
         qR.put(["Action", "Exited by user."])
         exit_flag.set()
         MUD_thread.join()
-
-def speech_to_text(mic_index):
-    r = sr.Recognizer()
-    with sr.Microphone(device_index=mic_index) as source:
-        r.adjust_for_ambient_noise(source)
-        failures = 0
-        while True:
-            print("Listening...")
-            audio = r.listen(source)
-            try:
-                return r.recognize_google(audio)
-            except sr.UnknownValueError:
-                failures = failures + 1
-                print("Could not understand audio. Current failures: " + str(failures), end='\033[F')
-            except sr.RequestError as e:
-                print(f"API error: {e}")
-
-
-def transmit_prompt(prompt):
-    global conversation_history
-    print("Sending prompt to model...", end='\r')
-    qR.put(["Action", "Sending prompt to model..."])
-
-    conversation_history += f"User: {prompt}\nNarrator:"
-
-    request = generate(model='llama_mud', prompt=conversation_history)
-    response = request['response'].strip()
-
-    conversation_history += f" {response}\n"
-
-    return response
-
-
-
-def text_to_speech(response):
-    ttsobj = gTTS(text=response, lang=language, slow=False)
-    with NamedTemporaryFile(delete=False, suffix=".mp3") as temp_file:
-        ttsobj.save(temp_file.name)
-        filename = temp_file.name
-
-    try:
-        pygame.mixer.quit()
-        pygame.mixer.init()
-        pygame.mixer.music.load(filename)
-        pygame.mixer.music.play()
-
-        while pygame.mixer.music.get_busy():
-            time.sleep(0.5)
-
-    finally:
-        pygame.mixer.music.stop()
-        pygame.mixer.quit()
-
-        for _ in range(10):
-            try:
-                os.remove(filename)
-                break
-            except PermissionError:
-                time.sleep(0.2)
 
 
 if __name__ == "__main__":
