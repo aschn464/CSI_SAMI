@@ -66,3 +66,17 @@ As the project progressed, we continued to iterate and add additional functional
 - Refining the gesture integration process to ensure robot embodiment through synced movements and expressions.
 
 # Final Product
+### CSI Final Functionality
+ - Complete speech -> text -> speech pipeline - users are able to speak directly to SAMI, and SAMI will speak back to them
+
+ - Optional text-only mode - for users with accessibility conflicts, CSI now has an optional text-only version that doesn't utilize the speech -> text -> speech pipeline
+
+ - Gesture during interaction - SAMI now performs gestures when listening to the player, when thinking of their response, and when telling their part of the story
+
+ - Story tracking - the entire story is stored in a text file for later reference if desired. Additionally, older interactions are shortened and added to an ongoing "story summary". This summary is used when requesting a response from the LLM instead of the full story in order to keep LLM response generation times to a minimum.
+
+ - Interactive inventory system - players are now able to add, remove, and use items they find during their game.
+
+ - Accessories - SAMI can now dress for the occasion!
+
+[View our Portfolio website for media!]()
