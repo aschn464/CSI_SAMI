@@ -61,7 +61,7 @@ Our initial code design was single-thread execution: i.e. every action would exe
 ### Additional Behavior Development
 If we were giving Sami the ability to gesticulate while talking, we wanted a library of potential gestures to choose from. For an earlier assignment, each member of the team had developed several behaviors for the SAMI robot, and although several of these were easily modified to fit their new use, we also wanted several other.
 
-Check out our [emotes](https://github.com/aschn464/CSI_SAMI/tree/main/emotes) folder for custom expressive movements, informative media, and associated JSON files.
+Check out our [Emotes](https://github.com/aschn464/CSI_SAMI/tree/main/emotes) folder for custom expressive movements, informative media, and associated JSON files.
 
 ### Costume Design
 If SAMI was going to be telling a story, we wanted them to look the part. The team also began work on several 3-printable costume elements for the robot to wear. Check out the [Accessories]() folder for fantasy-based 3D-printable props.
@@ -87,4 +87,4 @@ As the project progressed, we continued to iterate and add additional functional
 
 - Accessories - SAMI can now dress for the occasion!
 
-[View our Portfolio website for additional media!]()
+[View our Portfolio website for additional media!](https://sites.google.com/oregonstate.edu/rob421-portfolio/home)
