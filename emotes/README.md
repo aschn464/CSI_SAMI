@@ -28,7 +28,7 @@ Below is a video representing the behavior:
 ## Explaining
 Below is a video representing the behavior:
 
-[Explaining]()
+[Explaining](https://drive.google.com/file/d/1tr2mXaU-EHXxoFaCuUM9i8ByLPDO_adz/view?usp=drive_link)
 
 ## Gesture Far
 Below is a video representing the behavior:
