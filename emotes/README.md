@@ -18,52 +18,55 @@ Below is the full list of emotes:
 ## Cast Spell
 Below is a video representing the behavior:
 
-
+[Cast Spell](https://drive.google.com/file/d/1_73G_yBWs92T8AzFXNlAf3HW5qCyUFpV/view?usp=drive_link)
 
 ## Cower
 Below is a video representing the behavior:
 
-
+[Cower](https://drive.google.com/file/d/1ekxnN2bMXbFAzLnVmWQZ2nosdfGxO_X5/view?usp=drive_link)
 
 ## Explaining
 Below is a video representing the behavior:
 
-
+[Explaining]()
 
 ## Gesture Far
 Below is a video representing the behavior:
 
-
+[Gesture Far](https://drive.google.com/file/d/1H8D2rs1mPuzZWSnILpH-vX8W7RWuY-ah/view?usp=drive_link)
 
 ## Give
 Below is a video representing the behavior:
 
+[Give](https://drive.google.com/file/d/1DiDcOTB5eOzEQeDayxuRxoQcruoUz1ya/view?usp=drive_link)
 
-
-## Point Foward
+## Point Forward
 Below is a video representing the behavior:
 
-
+[Point Forward](https://drive.google.com/file/d/1I-VukSikg_R4tru2e4iYVOiqzBEfwzEA/view?usp=drive_link)
 
 ## Point Left
 Below is a video representing the behavior:
 
-
+[Point Left](https://drive.google.com/file/d/1svEhEWhGKNcOfTbVbhI64AzcRIesA3Ns/view?usp=drive_link)
 
 ## Point Right
 Below is a video representing the behavior:
 
-
+[Point Right](https://drive.google.com/file/d/1D7ATOjyeCZA7CE1X1kt4RtSqlIrg_uaI/view?usp=drive_link)
 
 ## Show Big
 Below is a video representing the behavior:
 
-
+[Show Big](https://drive.google.com/file/d/1UZAKjE9pylBwWh3kXwXXMW5NAIn2qaXD/view?usp=drive_link)
 
 ## Shrug
 Below is a video representing the behavior:
 
-
+[Shrug](https://drive.google.com/file/d/1lOm3jRL5nj0CIgvfA4kJ2lOU4fdYBCOy/view?usp=drive_link)
 
 ## Surprise
-WIP
+Below is a video representing the behavior:
+
+[Surprise](https://drive.google.com/file/d/1WI-fq6CQegz1bNwM3WLybnGUtSaxAFeh/view?usp=drive_link)
+
